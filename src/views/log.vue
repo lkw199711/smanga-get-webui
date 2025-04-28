@@ -8,7 +8,7 @@
     </div>
 </template>
 
-<script setup>
+<script lang="ts" setup>
 import logApi from '@/api/log'
 import { onMounted, ref } from 'vue'
 

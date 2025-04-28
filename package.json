@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:docker": "vite --mode docker",
     "build": "run-p type-check \"build-only {@}\" --",
+    "build:docker": "vite build --mode docker",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
