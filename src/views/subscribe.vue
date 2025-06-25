@@ -1,6 +1,7 @@
 <template>
     <div>
         <mForm />
+        <div>订阅总数： {{ subscribeStore.subscribes.length }}</div>
         <div class="subscribe-list">
             <div v-for="(item, index) in subscribeStore.subscribes" class="subscribe" :key="item.id">
                 [{{ item.website }}] {{ item.name }}
