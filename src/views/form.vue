@@ -1,12 +1,13 @@
 <template>
     <el-form :model="form" label-width="auto" style="max-width: 600px">
         <el-form-item label="漫画链接">
-            <el-input v-model="mangaUrl" />
+            <el-input v-model="form.mangaUrl" />
         </el-form-item>
         <el-form-item label="漫画平台">
             <el-select v-model="form.website" placeholder="请选择漫画网站">
                 <el-option label="玩漫(toomics)" value="toomics" />
                 <el-option label="哔哩哔哩(bilibili)" value="bilibili" />
+                <el-option label="绅士漫画(gentleman)" value="gentleman" />
             </el-select>
         </el-form-item>
 
@@ -32,30 +33,47 @@ import smangaAxios from '@/api'
 import { ElMessage } from 'element-plus'
 import useSubscribeStore from '@/stores/subscribe'
 import useTaskstore from '@/stores/task'
+import _ from 'lodash'
 
 const subscribeStore = useSubscribeStore()
 const taskStore = useTaskstore()
 // do not use same name with ref
-
-let mangaUrl = ref('');
 const form = reactive({
+    mangaUrl: '',
     id: null as number | null,
     name: '',
     website: '',
 })
 
 function analysis() {
-    if (!mangaUrl) {
+    if (!form.mangaUrl) {
         console.log('mangaUrl is empty')
         return
     }
 
     //https://toomics.com/sc/webtoon/episode/toon/4866
 
-    if (/toomics/.test(mangaUrl.value)) {
+    if (/toomics/.test(form.mangaUrl)) {
         form.website = 'toomics'
-    } else if (/bilibili/.test(mangaUrl.value)) {
+        const endStr = form.mangaUrl.split('/').pop()
+        const idStr = endStr?.match(/\d+/g)?.[0]
+        form.id = Number(idStr)
+        form.name = idStr || '';
+    } else if (/bilibili/.test(form.mangaUrl)) {
         form.website = 'bilibili'
+        const endStr = form.mangaUrl.split('/').pop()
+        const idStr = endStr?.match(/\d+/g)?.[0]
+        form.id = Number(idStr)
+        form.name = idStr || '';
+    } else if (/wnacg.ru/.test(form.mangaUrl)) {
+        form.website = 'gentleman'
+        form.id = 1
+        // 截取参数q
+        const idStr = form.mangaUrl.split('q=')[1].split('&')[0]
+        // 编码回原始字符
+        const name = decodeURIComponent(idStr)
+        form.name = name || '';
+        form.moveEndSubscribe = true
     } else {
         ElMessage({
             message: '不支持的漫画网站',
@@ -63,10 +81,7 @@ function analysis() {
         })
         return
     }
-    const endStr = mangaUrl.value.split('/').pop()
-    const idStr = endStr?.match(/\d+/g)?.[0]
-    form.id = Number(idStr)
-    form.name = idStr || '';
+    
 }
 
 async function task() {
@@ -75,11 +90,6 @@ async function task() {
         return
     }
     await smangaAxios.post('task', form)
-
-    ElMessage({
-        message: '任务添加成功',
-        type: 'success',
-    })
 
     taskStore.get()
 }
@@ -90,11 +100,6 @@ async function subscribe() {
         return
     }
     await smangaAxios.post('subscribe', form)
-
-    ElMessage({
-        message: '订阅添加成功',
-        type: 'success',
-    })
 
     subscribeStore.get()
 }
