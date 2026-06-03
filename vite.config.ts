@@ -1,23 +1,35 @@
 import { fileURLToPath, URL } from 'node:url'
 
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
-  server: {
-    host: '0.0.0.0', // 允许所有网络接口访问
-    port: 9799,      // 指定端口（默认可能为 5173 或 3000）
-    strictPort: true // 严格绑定指定端口
-  },
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const apiTarget = env.VITE_API_URL || 'http://localhost:9800'
+
+  return {
+    server: {
+      host: '0.0.0.0',
+      port: 9799,
+      strictPort: true,
+      proxy: {
+        '/api': {
+          target: apiTarget,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
     },
-  },
+    plugins: [
+      vue(),
+      vueDevTools(),
+    ],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      },
+    },
+  }
 })

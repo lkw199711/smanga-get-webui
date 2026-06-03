@@ -2,7 +2,7 @@ import Axios from "axios";
 import { ElMessage } from 'element-plus'
 
 const axios = Axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:9800',
+    baseURL: import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost:9800'),
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
