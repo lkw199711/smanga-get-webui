@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: '0.0.0.0',
-      port: 9799,
+      port: Number(env.VITE_PORT) || 9799,
       strictPort: true,
       proxy: {
         '/api': {
