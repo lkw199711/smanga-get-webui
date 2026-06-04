@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { TabsPaneContext } from 'element-plus'
 import subForm from './views/form.vue'
 import smangaNav from './layout/nav.vue'
+import smangaTabbar from './layout/tabbar.vue'
 </script>
 
 <template>
@@ -12,6 +13,7 @@ import smangaNav from './layout/nav.vue'
       <router-view />
     </div>
   </div>
+  <smangaTabbar />
 </template>
 
 <style scoped>
@@ -28,5 +30,17 @@ import smangaNav from './layout/nav.vue'
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    top: 52px;
+    bottom: 56px;
+  }
+
+  .page-container {
+    padding: 12px;
+    padding-bottom: 16px;
+  }
 }
 </style>

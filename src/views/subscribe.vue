@@ -169,4 +169,24 @@ function sub_delete(item: subscribeType) {
   justify-content: flex-end;
   border-top: 1px solid var(--border-light);
 }
+
+@media (max-width: 768px) {
+  .section-card {
+    padding: 16px;
+  }
+
+  .section-header {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .subscribe-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
 </style>

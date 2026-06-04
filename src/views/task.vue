@@ -413,4 +413,39 @@ function task_delete(item: subscribeType) {
   justify-content: flex-end;
   border-top: 1px solid var(--border-light);
 }
+
+@media (max-width: 768px) {
+  .section-card {
+    padding: 16px;
+  }
+
+  .section-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .current-task-progress {
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+
+  .task-groups {
+    gap: 16px;
+  }
+
+  .task-group {
+    padding: 12px;
+  }
+
+  .task-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
 </style>

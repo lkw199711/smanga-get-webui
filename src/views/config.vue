@@ -682,4 +682,56 @@ onMounted(() => {
   display: flex;
   gap: 8px;
 }
+
+@media (max-width: 768px) {
+  .config-header {
+    padding: 12px 16px;
+  }
+
+  .config-title {
+    font-size: 16px;
+  }
+
+  .config-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .config-tabs :deep(.el-tabs__content) {
+    padding: 14px 12px;
+  }
+
+  .config-form {
+    max-width: 100%;
+  }
+
+  .config-form :deep(.el-form-item__label) {
+    width: auto !important;
+    display: block;
+    padding-bottom: 4px;
+  }
+
+  .config-form :deep(.el-form-item__content) {
+    margin-left: 0 !important;
+  }
+
+  .form-hint {
+    margin-left: 0;
+    margin-top: 4px;
+    display: block;
+  }
+
+  .site-tabs :deep(.el-tabs__content) {
+    padding: 12px 0;
+  }
+
+  .raw-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .raw-actions {
+    flex-wrap: wrap;
+  }
+}
 </style>

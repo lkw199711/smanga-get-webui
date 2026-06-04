@@ -247,4 +247,47 @@ async function clear() {
   color: #a8d8a8;
   flex: 1;
 }
+
+@media (max-width: 768px) {
+  .log-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .log-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .log-title {
+    font-size: 16px;
+  }
+
+  .log-page.is-full-size {
+    width: 100%;
+    height: auto;
+    margin-left: 0;
+  }
+
+  .console-body {
+    padding: 10px;
+    font-size: 11px;
+    line-height: 1.6;
+    max-height: 400px;
+  }
+
+  .is-full-size .console-body {
+    max-height: none;
+  }
+
+  .line-number {
+    display: none;
+  }
+
+  .console-line {
+    gap: 0;
+  }
+}
 </style>

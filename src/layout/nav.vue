@@ -107,4 +107,23 @@ const handleSelect = async (key: string) => {
   border-bottom: 3px solid #ffd04b !important;
   background: rgba(255, 255, 255, 0.1) !important;
 }
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 16px;
+    height: 52px;
+  }
+
+  .header-brand {
+    margin-right: 0;
+  }
+
+  .brand-title {
+    font-size: 17px;
+  }
+
+  .header-menu {
+    display: none;
+  }
+}
 </style>

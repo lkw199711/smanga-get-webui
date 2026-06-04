@@ -14,7 +14,7 @@
       </el-form-item>
 
       <el-row :gutter="16">
-        <el-col :span="8">
+        <el-col :xs="24" :sm="8">
           <el-form-item label="漫画平台">
             <el-select v-model="form.website" placeholder="选择平台" style="width: 100%">
               <el-option label="玩漫 (Toomics)" value="toomics" />
@@ -23,12 +23,12 @@
             </el-select>
           </el-form-item>
         </el-col>
-        <el-col :span="8">
+        <el-col :xs="24" :sm="8">
           <el-form-item label="漫画ID">
             <el-input v-model="form.id" placeholder="自动解析" />
           </el-form-item>
         </el-col>
-        <el-col :span="8">
+        <el-col :xs="24" :sm="8">
           <el-form-item label="漫画名称">
             <el-input v-model="form.name" placeholder="自动解析" />
           </el-form-item>
@@ -174,5 +174,21 @@ async function subscribe() {
 .subscribe-form .el-input,
 .subscribe-form .el-select {
   --el-input-border-radius: var(--radius-sm);
+}
+
+@media (max-width: 768px) {
+  .form-card {
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .form-card-header {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .subscribe-form .el-form-item {
+    margin-bottom: 14px;
+  }
 }
 </style>
