@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import taskApi from '@/api/task'
-import type { subscribeType } from '@/type/index'
+import type { runningTasksType, subscribeType } from '@/type/index'
 
 const useTaskstore = defineStore('task', {
     state: () => ({
@@ -8,6 +8,12 @@ const useTaskstore = defineStore('task', {
         toomics: [] as subscribeType[],
         omegascans: [] as subscribeType[],
         manga: [] as subscribeType[],
+        running: {
+            bilibili: null,
+            toomics: null,
+            omegascans: null,
+            manga: null,
+        } as runningTasksType,
     }),
     actions: {
         async get() {
@@ -16,6 +22,12 @@ const useTaskstore = defineStore('task', {
             this.toomics = tasks.toomics ?? [];
             this.omegascans = tasks.omegascans ?? [];
             this.manga = tasks.manga ?? [];
+            this.running = tasks.running ?? {
+                bilibili: null,
+                toomics: null,
+                omegascans: null,
+                manga: null,
+            };
         },
         async delete(task: subscribeType) {
             await taskApi.delete(task);

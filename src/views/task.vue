@@ -24,13 +24,43 @@
         </div>
       </div>
 
+      <div v-if="currentRunningTask || totalTaskCount > 0" class="current-task-progress">
+        <div class="progress-header">
+          <div>
+            <span class="progress-title">当前任务</span>
+            <p class="progress-name">
+              {{ currentRunningTask?.task.name || '等待任务调度' }}
+            </p>
+          </div>
+          <el-tag :type="currentTaskTagType" size="small" round>
+            {{ currentTaskStatusText }}
+          </el-tag>
+        </div>
+        <template v-if="currentRunningTask">
+          <div class="progress-detail">
+            <el-tag size="small" effect="plain">{{ currentRunningTask.task.website }}</el-tag>
+            <span>{{ currentRunningTask.progress.stage }}</span>
+            <span v-if="currentRunningTask.progress.current && currentRunningTask.progress.total">
+              {{ currentRunningTask.progress.current }} / {{ currentRunningTask.progress.total }}
+            </span>
+          </div>
+          <el-progress
+            :percentage="currentRunningTask.progress.percent"
+            :stroke-width="10"
+            :status="currentTaskProgressStatus"
+          />
+          <p class="progress-message">{{ currentRunningTask.progress.message }}</p>
+        </template>
+        <p v-else class="progress-message">队列中有 {{ totalTaskCount }} 个任务，等待开始执行。</p>
+      </div>
+
       <el-empty v-if="isEmpty" description="暂无任务，快去添加吧">
         <template #image>
           <el-icon :size="60" color="var(--text-muted)"><FolderOpened /></el-icon>
         </template>
       </el-empty>
 
-      <div v-else class="task-groups">
+      <div v-else-if="totalTaskCount > 0" class="task-groups">
         <template v-for="group in taskGroups" :key="group.key">
           <div v-if="group.items.length" class="task-group">
             <div class="group-header">
@@ -85,13 +115,47 @@ const isRefreshing = ref(false)
 let refreshTimer: ReturnType<typeof window.setInterval> | undefined
 const refreshInterval = 5000
 
-const isEmpty = computed(
+const totalTaskCount = computed(
   () =>
-    taskStore.bilibili.length === 0 &&
-    taskStore.toomics.length === 0 &&
-    taskStore.omegascans.length === 0 &&
-    taskStore.manga.length === 0
+    taskStore.manga.length +
+    taskStore.bilibili.length +
+    taskStore.toomics.length +
+    taskStore.omegascans.length
 )
+
+const currentRunningTask = computed(
+  () =>
+    taskStore.running.manga ??
+    taskStore.running.bilibili ??
+    taskStore.running.toomics ??
+    taskStore.running.omegascans
+)
+
+const currentTaskStatusText = computed(() => {
+  if (!currentRunningTask.value) return '等待中'
+  if (currentRunningTask.value.status === 'success') return '已完成'
+  if (currentRunningTask.value.status === 'failed') return '执行失败'
+
+  return '执行中'
+})
+
+const currentTaskTagType = computed(() => {
+  if (!currentRunningTask.value) return 'info'
+  if (currentRunningTask.value.status === 'success') return 'success'
+  if (currentRunningTask.value.status === 'failed') return 'danger'
+
+  return 'primary'
+})
+
+const currentTaskProgressStatus = computed(() => {
+  if (!currentRunningTask.value) return undefined
+  if (currentRunningTask.value.status === 'success') return 'success'
+  if (currentRunningTask.value.status === 'failed') return 'exception'
+
+  return undefined
+})
+
+const isEmpty = computed(() => totalTaskCount.value === 0 && !currentRunningTask.value)
 
 const taskGroups = computed(() => [
   { key: 'manga', label: '主任务', badgeColor: '通用', items: taskStore.manga },
@@ -200,6 +264,53 @@ function stopAutoRefresh() {
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.current-task-progress {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.progress-title {
+  display: block;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.progress-name {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.progress-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.progress-message {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  word-break: break-all;
 }
 
 .task-groups {
