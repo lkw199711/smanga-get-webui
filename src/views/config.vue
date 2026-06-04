@@ -368,7 +368,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted, watch, computed } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import {
   Setting,
   Refresh,
@@ -393,9 +393,11 @@ const activeSiteTab = ref('toomics')
 const configPath = ref('')
 const rawJson = ref('')
 const rawError = ref('')
+const isDirty = ref(false)
 
 // 深拷贝原始配置，用于比对修改
 let originalConfig: AppConfig | null = null
+const originalConfigSignature = ref('')
 
 type SiteKey = 'toomics' | 'toomics-sc' | 'toomics-tc' | 'bilibili' | 'omegascans' | 'gentleman'
 
@@ -514,10 +516,20 @@ const siteSwitchFields: Record<SiteKey, string[]> = {
   gentleman: ['organize'],
 }
 
-const isDirty = computed(() => {
-  if (!originalConfig) return false
-  return !_.isEqual(form, originalConfig)
-})
+function snapshotConfig(config: AppConfig) {
+  return JSON.parse(JSON.stringify(config)) as AppConfig
+}
+
+function setOriginalConfig(config: AppConfig) {
+  originalConfig = snapshotConfig(config)
+  originalConfigSignature.value = JSON.stringify(originalConfig)
+}
+
+function updateDirtyState() {
+  isDirty.value = originalConfig
+    ? JSON.stringify(form) !== originalConfigSignature.value
+    : false
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -591,7 +603,8 @@ function normalizeConfig(config: AppConfig) {
 function fillForm(config: AppConfig) {
   const normalized = normalizeConfig(config)
   Object.assign(form, normalized)
-  originalConfig = _.cloneDeep(normalized)
+  setOriginalConfig(normalized)
+  updateDirtyState()
   syncFormToRaw()
 }
 
@@ -618,8 +631,10 @@ async function fetchConfig() {
 async function saveConfig() {
   saving.value = true
   try {
-    await configApi.update({ ...form })
-    originalConfig = _.cloneDeep({ ...form })
+    const payload = snapshotConfig(form)
+    await configApi.update(payload)
+    setOriginalConfig(payload)
+    updateDirtyState()
     ElMessage.success('配置保存成功')
   } catch (e: unknown) {
     ElMessage.error(`保存失败: ${errorMessage(e)}`)
@@ -632,6 +647,7 @@ async function saveConfig() {
 function resetConfig() {
   if (originalConfig) {
     Object.assign(form, _.cloneDeep(originalConfig))
+    updateDirtyState()
     syncFormToRaw()
   }
 }
@@ -639,7 +655,7 @@ function resetConfig() {
 // 表单 -> 原始 JSON
 function syncFormToRaw() {
   try {
-    rawJson.value = JSON.stringify({ ...form }, null, 2)
+    rawJson.value = JSON.stringify(snapshotConfig(form), null, 2)
     rawError.value = ''
   } catch (e: unknown) {
     rawError.value = `格式化失败: ${errorMessage(e)}`
@@ -692,6 +708,8 @@ watch(activeTab, (val) => {
     syncFormToRaw()
   }
 })
+
+watch(form, updateDirtyState, { deep: true })
 
 onMounted(() => {
   fetchConfig()
