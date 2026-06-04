@@ -1,110 +1,233 @@
 <template>
-    <div>
-        <mForm />
+  <div class="task-page">
+    <mForm />
 
-        <el-empty v-if="isEmpty" description="暂无任务" />
-
-        <div v-else>
-            <div v-if="taskStore.manga.length" class="task-section">
-                <h3>主任务队列</h3>
-                <div v-for="item in taskStore.manga" class="task" :key="'manga-' + item.id">
-                    <span class="task-name">[{{ item.website }}] {{ item.name }}</span>
-                    <p class="task-bottom">
-                        <el-tag v-if="item.chapterCount">总数: {{ item.chapterCount }}</el-tag>
-                        <el-button type="danger" size="small" @click="task_delete(item)">删除</el-button>
-                    </p>
-                </div>
-            </div>
-
-            <div v-if="taskStore.bilibili.length" class="task-section">
-                <h3>Bilibili 任务</h3>
-                <div v-for="item in taskStore.bilibili" class="task" :key="'bilibili-' + item.id">
-                    <span class="task-name">[{{ item.website }}] {{ item.name }}</span>
-                    <p class="task-bottom">
-                        <el-tag v-if="item.chapterCount">总数: {{ item.chapterCount }}</el-tag>
-                        <el-button type="danger" size="small" @click="task_delete(item)">删除</el-button>
-                    </p>
-                </div>
-            </div>
-
-            <div v-if="taskStore.toomics.length" class="task-section">
-                <h3>Toomics 任务</h3>
-                <div v-for="item in taskStore.toomics" class="task" :key="'toomics-' + item.id">
-                    <span class="task-name">[{{ item.website }}] {{ item.name }}</span>
-                    <p class="task-bottom">
-                        <el-tag v-if="item.chapterCount">总数: {{ item.chapterCount }}</el-tag>
-                        <el-button type="danger" size="small" @click="task_delete(item)">删除</el-button>
-                    </p>
-                </div>
-            </div>
-
-            <div v-if="taskStore.omegascans.length" class="task-section">
-                <h3>OmegaScans 任务</h3>
-                <div v-for="item in taskStore.omegascans" class="task" :key="'omegascans-' + item.id">
-                    <span class="task-name">[{{ item.website }}] {{ item.name }}</span>
-                    <p class="task-bottom">
-                        <el-tag v-if="item.chapterCount">总数: {{ item.chapterCount }}</el-tag>
-                        <el-button type="danger" size="small" @click="task_delete(item)">删除</el-button>
-                    </p>
-                </div>
-            </div>
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title-group">
+          <el-icon class="section-icon" :size="20"><List /></el-icon>
+          <h3 class="section-title">任务队列</h3>
         </div>
+        <el-tag type="info" round effect="plain">
+          {{
+            taskStore.manga.length +
+            taskStore.bilibili.length +
+            taskStore.toomics.length +
+            taskStore.omegascans.length
+          }} 个任务
+        </el-tag>
+      </div>
+
+      <el-empty v-if="isEmpty" description="暂无任务，快去添加吧">
+        <template #image>
+          <el-icon :size="60" color="var(--text-muted)"><FolderOpened /></el-icon>
+        </template>
+      </el-empty>
+
+      <div v-else class="task-groups">
+        <template v-for="group in taskGroups" :key="group.key">
+          <div v-if="group.items.length" class="task-group">
+            <div class="group-header">
+              <h4 class="group-title">{{ group.label }}</h4>
+              <el-tag size="small" round>{{ group.items.length }} 部</el-tag>
+            </div>
+            <div class="task-grid">
+              <div
+                v-for="item in group.items"
+                :key="group.key + '-' + item.id"
+                class="task-card"
+              >
+                <div class="card-badge">{{ group.badgeColor }}</div>
+                <div class="card-body">
+                  <h5 class="card-name">{{ item.name }}</h5>
+                  <div class="card-meta">
+                    <el-tag v-if="item.chapterCount" size="small" type="success" effect="plain">
+                      {{ item.chapterCount }} 话
+                    </el-tag>
+                  </div>
+                </div>
+                <div class="card-footer">
+                  <el-button
+                    type="danger"
+                    size="small"
+                    plain
+                    @click="task_delete(item)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    删除
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
+  </div>
 </template>
 
 <script lang="ts" setup>
 import mForm from './form.vue'
 import { computed, onMounted } from 'vue'
+import { List, Delete, FolderOpened } from '@element-plus/icons-vue'
 import useTaskStore from '@/stores/task'
 import type { subscribeType } from '@/type/index'
 
 const taskStore = useTaskStore()
 
-const isEmpty = computed(() =>
+const isEmpty = computed(
+  () =>
     taskStore.bilibili.length === 0 &&
     taskStore.toomics.length === 0 &&
     taskStore.omegascans.length === 0 &&
     taskStore.manga.length === 0
 )
 
+const taskGroups = computed(() => [
+  { key: 'manga', label: '主任务', badgeColor: '通用', items: taskStore.manga },
+  { key: 'bilibili', label: 'Bilibili', badgeColor: 'B站', items: taskStore.bilibili },
+  { key: 'toomics', label: 'Toomics', badgeColor: '韩漫', items: taskStore.toomics },
+  { key: 'omegascans', label: 'OmegaScans', badgeColor: '欧美', items: taskStore.omegascans },
+])
+
 onMounted(() => {
-    taskStore.get()
+  taskStore.get()
 })
 
 function task_delete(item: subscribeType) {
-    taskStore.delete(item)
+  taskStore.delete(item)
 }
-
 </script>
 
-<style>
-.task-section {
-    margin: 16px 0;
+<style scoped>
+.task-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-.task-section h3 {
-    margin-bottom: 8px;
-    color: #333;
+.section-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
 }
 
-.task {
-    margin: 10px 0;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-    width: 280px;
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
 }
 
-.task-name {
-    font-size: 14px;
-    word-break: break-all;
+.section-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.task-bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 8px;
+.section-icon {
+  color: var(--primary);
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.task-group {
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  border: 1px solid var(--border-light);
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.group-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.task-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-light);
+}
+
+.card-badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 3px 10px;
+  margin: 12px 12px 0;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.card-body {
+  flex: 1;
+  padding: 12px 16px 8px;
+}
+
+.card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-footer {
+  padding: 10px 16px 14px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
 }
 </style>

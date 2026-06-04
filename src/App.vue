@@ -6,9 +6,11 @@ import smangaNav from './layout/nav.vue'
 </script>
 
 <template>
-  <smangaNav></smangaNav>
+  <smangaNav />
   <div class="layout">
-    <router-view />
+    <div class="page-container">
+      <router-view />
+    </div>
   </div>
 </template>
 
@@ -17,8 +19,14 @@ import smangaNav from './layout/nav.vue'
   position: absolute;
   top: 60px;
   bottom: 0;
-  padding: 20px;
   width: 100%;
   overflow: auto;
+  background: var(--bg-page);
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
 }
 </style>
