@@ -8,14 +8,20 @@
           <el-icon class="section-icon" :size="20"><List /></el-icon>
           <h3 class="section-title">任务队列</h3>
         </div>
-        <el-tag type="info" round effect="plain">
-          {{
-            taskStore.manga.length +
-            taskStore.bilibili.length +
-            taskStore.toomics.length +
-            taskStore.omegascans.length
-          }} 个任务
-        </el-tag>
+        <div class="section-actions">
+          <label class="auto-refresh-control">
+            <span>自动刷新</span>
+            <el-switch v-model="autoRefresh" size="small" />
+          </label>
+          <el-tag type="info" round effect="plain">
+            {{
+              taskStore.manga.length +
+              taskStore.bilibili.length +
+              taskStore.toomics.length +
+              taskStore.omegascans.length
+            }} 个任务
+          </el-tag>
+        </div>
       </div>
 
       <el-empty v-if="isEmpty" description="暂无任务，快去添加吧">
@@ -68,12 +74,16 @@
 
 <script lang="ts" setup>
 import mForm from './form.vue'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { List, Delete, FolderOpened } from '@element-plus/icons-vue'
 import useTaskStore from '@/stores/task'
 import type { subscribeType } from '@/type/index'
 
 const taskStore = useTaskStore()
+const autoRefresh = ref(false)
+const isRefreshing = ref(false)
+let refreshTimer: ReturnType<typeof window.setInterval> | undefined
+const refreshInterval = 5000
 
 const isEmpty = computed(
   () =>
@@ -91,11 +101,48 @@ const taskGroups = computed(() => [
 ])
 
 onMounted(() => {
-  taskStore.get()
+  refresh()
+})
+
+onUnmounted(() => {
+  stopAutoRefresh()
+})
+
+watch(autoRefresh, (enabled) => {
+  if (enabled) {
+    refresh()
+    startAutoRefresh()
+    return
+  }
+
+  stopAutoRefresh()
 })
 
 function task_delete(item: subscribeType) {
   taskStore.delete(item)
+}
+
+async function refresh() {
+  if (isRefreshing.value) return
+
+  isRefreshing.value = true
+  try {
+    await taskStore.get()
+  } finally {
+    isRefreshing.value = false
+  }
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  refreshTimer = window.setInterval(refresh, refreshInterval)
+}
+
+function stopAutoRefresh() {
+  if (!refreshTimer) return
+
+  window.clearInterval(refreshTimer)
+  refreshTimer = undefined
 }
 </script>
 
@@ -127,6 +174,22 @@ function task_delete(item: subscribeType) {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.auto-refresh-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .section-icon {

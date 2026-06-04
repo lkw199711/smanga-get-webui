@@ -1,5 +1,5 @@
 <template>
-  <div class="log-page">
+  <div class="log-page" :class="{ 'is-full-size': fullSize }">
     <div class="log-card">
       <div class="log-header">
         <div class="log-title-group">
@@ -7,6 +7,14 @@
           <h3 class="log-title">系统日志</h3>
         </div>
         <div class="log-actions">
+          <label class="log-switch-control">
+            <span>铺满窗口</span>
+            <el-switch v-model="fullSize" size="small" />
+          </label>
+          <label class="auto-refresh-control">
+            <span>自动刷新</span>
+            <el-switch v-model="autoRefresh" size="small" />
+          </label>
           <el-button @click="refresh" type="primary" size="small">
             <el-icon><Refresh /></el-icon>
             刷新
@@ -43,31 +51,77 @@
 
 <script lang="ts" setup>
 import logApi from '@/api/log'
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { Document, Refresh, Delete } from '@element-plus/icons-vue'
 
 const logs = ref<string[]>([])
+const autoRefresh = ref(false)
+const fullSize = ref(true)
+const isRefreshing = ref(false)
+let refreshTimer: ReturnType<typeof window.setInterval> | undefined
+const refreshInterval = 5000
 
 onMounted(() => {
   refresh()
 })
 
+onUnmounted(() => {
+  stopAutoRefresh()
+})
+
+watch(autoRefresh, (enabled) => {
+  if (enabled) {
+    refresh()
+    startAutoRefresh()
+    return
+  }
+
+  stopAutoRefresh()
+})
+
 async function refresh() {
-  logs.value = await logApi.get()
+  if (isRefreshing.value) return
+
+  isRefreshing.value = true
+  try {
+    logs.value = await logApi.get()
+  } finally {
+    isRefreshing.value = false
+  }
 }
 
 async function clear() {
   await logApi.clear()
   logs.value = []
 }
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  refreshTimer = window.setInterval(refresh, refreshInterval)
+}
+
+function stopAutoRefresh() {
+  if (!refreshTimer) return
+
+  window.clearInterval(refreshTimer)
+  refreshTimer = undefined
+}
 </script>
 
 <style scoped>
 .log-page {
+  display: flex;
   height: 100%;
 }
 
+.log-page.is-full-size {
+  width: calc(100vw - 48px);
+  height: calc(100vh - 108px);
+  margin-left: calc(50% - 50vw + 24px);
+}
+
 .log-card {
+  flex: 1;
   background: var(--bg-card);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
@@ -103,7 +157,26 @@ async function clear() {
 
 .log-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.auto-refresh-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.log-switch-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .log-console {
@@ -111,6 +184,11 @@ async function clear() {
   min-height: 400px;
   display: flex;
   flex-direction: column;
+}
+
+.is-full-size .log-card,
+.is-full-size .log-console {
+  min-height: 0;
 }
 
 .console-header {
@@ -156,6 +234,11 @@ async function clear() {
   font-size: 13px;
   line-height: 1.8;
   max-height: 500px;
+}
+
+.is-full-size .console-body {
+  min-height: 0;
+  max-height: none;
 }
 
 .console-empty {
