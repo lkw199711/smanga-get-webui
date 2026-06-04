@@ -3,6 +3,8 @@ export type subscribeType = {
     id: number
     name: string
     chapterCount: number
+    url?: string
+    moveEndSubscribe?: boolean
 }
 
 export type taskProgressType = {

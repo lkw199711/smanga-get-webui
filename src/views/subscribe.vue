@@ -1,5 +1,5 @@
 <template>
-  <div class="subscribe-page">
+  <div class="subscribe-page" @dragover.prevent @drop.prevent="onSubscribePageDrop">
     <mForm />
 
     <div class="section-card">
@@ -13,12 +13,22 @@
 
       <el-empty v-if="!subscribeStore.subscribes.length" description="暂无订阅，快去添加吧" />
 
-      <div v-else class="subscribe-grid">
+      <div v-else class="subscribe-grid" @dragover.prevent @drop.prevent="onSubscribePageDrop">
         <div
-          v-for="item in subscribeStore.subscribes"
-          :key="item.id"
+          v-for="(item, index) in subscribeStore.subscribes"
+          :key="`${item.website}-${item.id}-${item.name}`"
           class="subscribe-card"
+          :class="{ 'is-dragging': draggingIndex === index, 'is-drag-over': dragOverIndex === index }"
+          draggable="true"
+          @dragstart="onSubscribeDragStart(index, $event)"
+          @dragover.prevent="onSubscribeDragOver(index)"
+          @dragleave="onSubscribeDragLeave(index)"
+          @drop.stop.prevent="onSubscribeDrop(index)"
+          @dragend="onSubscribeDragEnd"
         >
+          <el-tooltip content="拖拽排序" placement="top">
+            <el-icon class="drag-handle"><Rank /></el-icon>
+          </el-tooltip>
           <div class="card-badge">{{ item.website }}</div>
           <div class="card-body">
             <h4 class="card-name">{{ item.name }}</h4>
@@ -29,6 +39,16 @@
             </div>
           </div>
           <div class="card-footer">
+            <el-button
+              type="primary"
+              size="small"
+              plain
+              :loading="downloadingKey === getSubscribeKey(item)"
+              @click.stop="task_add(item)"
+            >
+              <el-icon><Download /></el-icon>
+              下载
+            </el-button>
             <el-button
               type="danger"
               size="small"
@@ -47,9 +67,11 @@
 
 <script lang="ts" setup>
 import mForm from './form.vue'
-import { onMounted } from 'vue'
-import { Collection, Delete } from '@element-plus/icons-vue'
+import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Collection, Delete, Download, Rank } from '@element-plus/icons-vue'
 import useSubscribeStore from '@/stores/subscribe'
+import useTaskStore from '@/stores/task'
 import type { subscribeType } from '@/type'
 
 defineOptions({
@@ -57,6 +79,10 @@ defineOptions({
 })
 
 const subscribeStore = useSubscribeStore()
+const taskStore = useTaskStore()
+const draggingIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+const downloadingKey = ref<string | null>(null)
 
 onMounted(() => {
   subscribeStore.get()
@@ -64,6 +90,86 @@ onMounted(() => {
 
 function sub_delete(item: subscribeType) {
   subscribeStore.delete(item)
+}
+
+function getSubscribeKey(item: subscribeType) {
+  return `${item.website}-${item.id}-${item.name}`
+}
+
+async function task_add(item: subscribeType) {
+  const key = getSubscribeKey(item)
+  downloadingKey.value = key
+
+  try {
+    await taskStore.add({
+      ...item,
+      mangaUrl: item.url,
+    })
+  } catch {
+    ElMessage.error('下载任务添加失败')
+  } finally {
+    if (downloadingKey.value === key) {
+      downloadingKey.value = null
+    }
+  }
+}
+
+function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
+  const next = [...items]
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
+
+  return next
+}
+
+function clearDragState() {
+  draggingIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onSubscribeDragStart(index: number, event: DragEvent) {
+  draggingIndex.value = index
+  dragOverIndex.value = index
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('application/x-smanga-subscribe-index', String(index))
+  }
+}
+
+function onSubscribeDragOver(index: number) {
+  if (draggingIndex.value === null || draggingIndex.value === index) return
+
+  dragOverIndex.value = index
+}
+
+function onSubscribeDragLeave(index: number) {
+  if (dragOverIndex.value === index) {
+    dragOverIndex.value = null
+  }
+}
+
+async function onSubscribeDrop(index: number) {
+  const fromIndex = draggingIndex.value
+  clearDragState()
+
+  if (fromIndex === null || fromIndex === index) return
+
+  const orderedSubscribes = moveItem(subscribeStore.subscribes, fromIndex, index)
+
+  try {
+    await subscribeStore.reorder(orderedSubscribes)
+  } catch {
+    ElMessage.error('订阅顺序保存失败')
+  }
+}
+
+function onSubscribeDragEnd() {
+  clearDragState()
+}
+
+function onSubscribePageDrop() {
+  clearDragState()
 }
 </script>
 
@@ -121,6 +227,8 @@ function sub_delete(item: subscribeType) {
   transition: all var(--transition-normal);
   display: flex;
   flex-direction: column;
+  position: relative;
+  cursor: grab;
 }
 
 .subscribe-card:hover {
@@ -129,11 +237,42 @@ function sub_delete(item: subscribeType) {
   border-color: var(--primary-light);
 }
 
+.subscribe-card:active {
+  cursor: grabbing;
+}
+
+.subscribe-card.is-dragging {
+  opacity: 0.55;
+  transform: scale(0.98);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.subscribe-card.is-drag-over {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary-light);
+}
+
+.drag-handle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  color: var(--text-muted);
+  cursor: grab;
+  transition: color var(--transition-fast);
+}
+
+.subscribe-card:hover .drag-handle,
+.subscribe-card.is-drag-over .drag-handle {
+  color: var(--primary);
+}
+
 .card-badge {
   display: inline-block;
   align-self: flex-start;
   padding: 3px 10px;
-  margin: 12px 12px 0;
+  margin: 12px 42px 0 12px;
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #fff;
   font-size: 11px;
@@ -171,7 +310,13 @@ function sub_delete(item: subscribeType) {
   padding: 10px 16px 14px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
   border-top: 1px solid var(--border-light);
+}
+
+.card-footer :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 @media (max-width: 768px) {

@@ -13,6 +13,17 @@ const useSubscribestore = defineStore('counter', {
         async delete(subscribe: subscribeType) {
             await subscribeApi.delete(subscribe)
             this.subscribes = this.subscribes.filter((item) => item.id !== subscribe.id)
+        },
+        async reorder(subscribes: subscribeType[]) {
+            const previous = [...this.subscribes]
+            this.subscribes = [...subscribes]
+
+            try {
+                await subscribeApi.reorder(this.subscribes)
+            } catch (error) {
+                this.subscribes = previous
+                throw error
+            }
         }
     }
 })

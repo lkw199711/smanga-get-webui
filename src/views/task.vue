@@ -1,5 +1,5 @@
 <template>
-  <div class="task-page">
+  <div class="task-page" @dragover.prevent @drop.prevent="onTaskPageDrop">
     <mForm />
 
     <div class="section-card">
@@ -13,6 +13,17 @@
             <span>自动刷新</span>
             <el-switch v-model="autoRefresh" size="small" />
           </label>
+          <el-button
+            type="danger"
+            size="small"
+            plain
+            :loading="clearingTasks"
+            :disabled="totalTaskCount === 0"
+            @click="clearTasks"
+          >
+            <el-icon><Delete /></el-icon>
+            清空任务
+          </el-button>
           <el-tag type="info" round effect="plain">
             {{
               taskStore.manga.length +
@@ -22,6 +33,22 @@
             }} 个任务
           </el-tag>
         </div>
+      </div>
+
+      <div class="quick-task-actions">
+        <el-button
+          v-for="action in quickTaskActions"
+          :key="action.type"
+          type="primary"
+          size="small"
+          plain
+          :loading="triggeringTask === action.type"
+          :disabled="triggeringTask !== null && triggeringTask !== action.type"
+          @click="triggerQuickTask(action.type)"
+        >
+          <el-icon><VideoPlay /></el-icon>
+          {{ action.label }}
+        </el-button>
       </div>
 
       <div v-if="currentRunningTask || totalTaskCount > 0" class="current-task-progress">
@@ -78,12 +105,25 @@
               <h4 class="group-title">{{ group.label }}</h4>
               <el-tag size="small" round>{{ group.items.length }} 部</el-tag>
             </div>
-            <div class="task-grid">
+            <div class="task-grid" @dragover.prevent @drop.prevent="onTaskPageDrop">
               <div
-                v-for="item in group.items"
-                :key="group.key + '-' + item.id"
+                v-for="(item, index) in group.items"
+                :key="`${group.key}-${item.website}-${item.id}-${item.name}`"
                 class="task-card"
+                :class="{
+                  'is-dragging': isTaskDragging(group.key, index),
+                  'is-drag-over': isTaskDragOver(group.key, index),
+                }"
+                draggable="true"
+                @dragstart="onTaskDragStart(group.key, index, $event)"
+                @dragover.prevent="onTaskDragOver(group.key, index)"
+                @dragleave="onTaskDragLeave(group.key, index)"
+                @drop.stop.prevent="onTaskDrop(group.key, index)"
+                @dragend="onTaskDragEnd"
               >
+                <el-tooltip content="拖拽排序" placement="top">
+                  <el-icon class="drag-handle"><Rank /></el-icon>
+                </el-tooltip>
                 <div class="card-badge">{{ group.badgeColor }}</div>
                 <div class="card-body">
                   <h5 class="card-name">{{ item.name }}</h5>
@@ -115,10 +155,12 @@
 
 <script lang="ts" setup>
 import mForm from './form.vue'
-import { computed, onMounted } from 'vue'
-import { List, Delete, FolderOpened } from '@element-plus/icons-vue'
-import useTaskStore from '@/stores/task'
+import { computed, onMounted, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { List, Delete, FolderOpened, Rank, VideoPlay } from '@element-plus/icons-vue'
+import useTaskStore, { type taskQueueKey } from '@/stores/task'
 import useAutoRefreshStore from '@/stores/autoRefresh'
+import type { TaskTriggerType } from '@/api/task'
 import type { subscribeType } from '@/type/index'
 
 defineOptions({
@@ -127,6 +169,17 @@ defineOptions({
 
 const taskStore = useTaskStore()
 const autoRefreshStore = useAutoRefreshStore()
+const draggingTask = ref<{ queue: taskQueueKey; index: number } | null>(null)
+const dragOverTask = ref<{ queue: taskQueueKey; index: number } | null>(null)
+const triggeringTask = ref<TaskTriggerType | null>(null)
+const clearingTasks = ref(false)
+
+const quickTaskActions: Array<{ type: TaskTriggerType; label: string }> = [
+  { type: 'toomics', label: '玩漫订阅' },
+  { type: 'toptoon', label: '顶通订阅' },
+  { type: 'omegascans', label: 'OmegaScans订阅' },
+  { type: 'gentleman', label: 'Gentleman订阅' },
+]
 
 const autoRefresh = computed({
   get: () => autoRefreshStore.taskEnabled,
@@ -186,7 +239,7 @@ const subProgressPercent = computed(() => {
 
 const isEmpty = computed(() => totalTaskCount.value === 0 && !currentRunningTask.value)
 
-const taskGroups = computed(() => [
+const taskGroups = computed<{ key: taskQueueKey; label: string; badgeColor: string; items: subscribeType[] }[]>(() => [
   { key: 'manga', label: '主任务', badgeColor: '通用', items: taskStore.manga },
   { key: 'bilibili', label: 'Bilibili', badgeColor: 'B站', items: taskStore.bilibili },
   { key: 'toomics', label: 'Toomics', badgeColor: '韩漫', items: taskStore.toomics },
@@ -203,6 +256,115 @@ onMounted(() => {
 
 function task_delete(item: subscribeType) {
   taskStore.delete(item)
+}
+
+async function triggerQuickTask(type: TaskTriggerType) {
+  triggeringTask.value = type
+
+  try {
+    await taskStore.trigger(type)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (!message || message === 'Request failed') {
+      ElMessage.error('任务触发失败')
+    }
+  } finally {
+    if (triggeringTask.value === type) {
+      triggeringTask.value = null
+    }
+  }
+}
+
+async function clearTasks() {
+  try {
+    await ElMessageBox.confirm('确定清空所有等待中的任务吗？正在执行的任务不会被中断。', '清空任务', {
+      type: 'warning',
+      confirmButtonText: '清空',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+
+  clearingTasks.value = true
+
+  try {
+    await taskStore.clear()
+  } catch {
+    ElMessage.error('任务清空失败')
+  } finally {
+    clearingTasks.value = false
+  }
+}
+
+function moveTaskItem(items: subscribeType[], fromIndex: number, toIndex: number) {
+  const next = [...items]
+  const [moved] = next.splice(fromIndex, 1)
+  if (!moved) return items
+
+  next.splice(toIndex, 0, moved)
+
+  return next
+}
+
+function clearTaskDragState() {
+  draggingTask.value = null
+  dragOverTask.value = null
+}
+
+function isTaskDragging(queue: taskQueueKey, index: number) {
+  return draggingTask.value?.queue === queue && draggingTask.value.index === index
+}
+
+function isTaskDragOver(queue: taskQueueKey, index: number) {
+  return dragOverTask.value?.queue === queue && dragOverTask.value.index === index
+}
+
+function onTaskDragStart(queue: taskQueueKey, index: number, event: DragEvent) {
+  draggingTask.value = { queue, index }
+  dragOverTask.value = { queue, index }
+
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('application/x-smanga-task-index', `${queue}:${index}`)
+  }
+}
+
+function onTaskDragOver(queue: taskQueueKey, index: number) {
+  if (!draggingTask.value || draggingTask.value.queue !== queue || draggingTask.value.index === index) {
+    return
+  }
+
+  dragOverTask.value = { queue, index }
+}
+
+function onTaskDragLeave(queue: taskQueueKey, index: number) {
+  if (dragOverTask.value?.queue === queue && dragOverTask.value.index === index) {
+    dragOverTask.value = null
+  }
+}
+
+async function onTaskDrop(queue: taskQueueKey, index: number) {
+  const source = draggingTask.value
+  clearTaskDragState()
+
+  if (!source || source.queue !== queue || source.index === index) return
+
+  const orderedTasks = moveTaskItem(taskStore[queue], source.index, index)
+
+  try {
+    await taskStore.reorder(queue, orderedTasks)
+  } catch {
+    ElMessage.error('任务顺序保存失败')
+  }
+}
+
+function onTaskDragEnd() {
+  clearTaskDragState()
+}
+
+function onTaskPageDrop() {
+  clearTaskDragState()
 }
 </script>
 
@@ -260,6 +422,18 @@ function task_delete(item: subscribeType) {
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.quick-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.quick-task-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .current-task-progress {
@@ -366,6 +540,8 @@ function task_delete(item: subscribeType) {
   transition: all var(--transition-normal);
   display: flex;
   flex-direction: column;
+  position: relative;
+  cursor: grab;
 }
 
 .task-card:hover {
@@ -374,11 +550,42 @@ function task_delete(item: subscribeType) {
   border-color: var(--primary-light);
 }
 
+.task-card:active {
+  cursor: grabbing;
+}
+
+.task-card.is-dragging {
+  opacity: 0.55;
+  transform: scale(0.98);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.task-card.is-drag-over {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary-light);
+}
+
+.drag-handle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  color: var(--text-muted);
+  cursor: grab;
+  transition: color var(--transition-fast);
+}
+
+.task-card:hover .drag-handle,
+.task-card.is-drag-over .drag-handle {
+  color: var(--primary);
+}
+
 .card-badge {
   display: inline-block;
   align-self: flex-start;
   padding: 3px 10px;
-  margin: 12px 12px 0;
+  margin: 12px 42px 0 12px;
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #fff;
   font-size: 11px;

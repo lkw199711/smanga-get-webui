@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
-import taskApi from '@/api/task'
+import taskApi, { type TaskTriggerType } from '@/api/task'
 import type { runningTasksType, subscribeType } from '@/type/index'
+
+export type taskQueueKey = 'bilibili' | 'toomics' | 'omegascans' | 'manga'
+type taskPayload = subscribeType & {
+    mangaUrl?: string
+}
 
 const useTaskstore = defineStore('task', {
     state: () => ({
@@ -32,6 +37,29 @@ const useTaskstore = defineStore('task', {
         async delete(task: subscribeType) {
             await taskApi.delete(task);
             this.get();
+        },
+        async clear() {
+            await taskApi.clear()
+            await this.get()
+        },
+        async add(task: taskPayload) {
+            await taskApi.add(task)
+            await this.get()
+        },
+        async trigger(type: TaskTriggerType) {
+            await taskApi.trigger(type)
+            await this.get()
+        },
+        async reorder(queue: taskQueueKey, tasks: subscribeType[]) {
+            const previous = [...this[queue]]
+            this[queue] = [...tasks]
+
+            try {
+                await taskApi.reorder(queue, this[queue])
+            } catch (error) {
+                this[queue] = previous
+                throw error
+            }
         }
     }
 })
