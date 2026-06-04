@@ -49,6 +49,17 @@
             :stroke-width="10"
             :status="currentTaskProgressStatus"
           />
+          <div v-if="hasSubProgress" class="sub-progress">
+            <div class="sub-progress-label">
+              <span>图片下载</span>
+              <span>{{ currentRunningTask.progress.subCurrent }} / {{ currentRunningTask.progress.subTotal }}</span>
+            </div>
+            <el-progress
+              :percentage="subProgressPercent"
+              :stroke-width="6"
+              color="var(--primary-light, #79bbff)"
+            />
+          </div>
           <p class="progress-message">{{ currentRunningTask.progress.message }}</p>
         </template>
         <p v-else class="progress-message">队列中有 {{ totalTaskCount }} 个任务，等待开始执行。</p>
@@ -158,6 +169,17 @@ const currentTaskProgressStatus = computed(() => {
   return undefined
 })
 
+const hasSubProgress = computed(() => {
+  const p = currentRunningTask.value?.progress
+  return p?.subTotal != null && p.subTotal > 0 && p.subCurrent != null
+})
+
+const subProgressPercent = computed(() => {
+  const p = currentRunningTask.value?.progress
+  if (!p?.subTotal || !p.subCurrent) return 0
+  return Math.round((p.subCurrent / p.subTotal) * 100)
+})
+
 const isEmpty = computed(() => totalTaskCount.value === 0 && !currentRunningTask.value)
 
 const taskGroups = computed(() => [
@@ -168,7 +190,9 @@ const taskGroups = computed(() => [
 ])
 
 onMounted(() => {
-  if (!autoRefreshStore.taskEnabled) {
+  if (autoRefreshStore.taskEnabled) {
+    autoRefreshStore.setTaskAutoRefresh(true)
+  } else {
     taskStore.get()
   }
 })
@@ -279,6 +303,23 @@ function task_delete(item: subscribeType) {
   color: var(--text-secondary);
   font-size: 13px;
   word-break: break-all;
+}
+
+.sub-progress {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+
+.sub-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .task-groups {

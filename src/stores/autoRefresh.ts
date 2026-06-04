@@ -6,8 +6,8 @@ const REFRESH_INTERVAL = 5000
 
 const useAutoRefreshStore = defineStore('autoRefresh', {
   state: () => ({
-    taskEnabled: false,
-    logEnabled: false,
+    taskEnabled: true,
+    logEnabled: true,
     taskTimer: null as ReturnType<typeof setInterval> | null,
     logTimer: null as ReturnType<typeof setInterval> | null,
   }),

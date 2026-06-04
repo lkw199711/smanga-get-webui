@@ -67,7 +67,9 @@ const autoRefresh = computed({
 })
 
 onMounted(() => {
-  if (!autoRefreshStore.logEnabled) {
+  if (autoRefreshStore.logEnabled) {
+    autoRefreshStore.setLogAutoRefresh(true)
+  } else {
     logStore.fetch()
   }
 })
