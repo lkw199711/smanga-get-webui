@@ -104,16 +104,19 @@
 
 <script lang="ts" setup>
 import mForm from './form.vue'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted } from 'vue'
 import { List, Delete, FolderOpened } from '@element-plus/icons-vue'
 import useTaskStore from '@/stores/task'
+import useAutoRefreshStore from '@/stores/autoRefresh'
 import type { subscribeType } from '@/type/index'
 
 const taskStore = useTaskStore()
-const autoRefresh = ref(false)
-const isRefreshing = ref(false)
-let refreshTimer: ReturnType<typeof window.setInterval> | undefined
-const refreshInterval = 5000
+const autoRefreshStore = useAutoRefreshStore()
+
+const autoRefresh = computed({
+  get: () => autoRefreshStore.taskEnabled,
+  set: (val) => autoRefreshStore.setTaskAutoRefresh(val),
+})
 
 const totalTaskCount = computed(
   () =>
@@ -165,48 +168,13 @@ const taskGroups = computed(() => [
 ])
 
 onMounted(() => {
-  refresh()
-})
-
-onUnmounted(() => {
-  stopAutoRefresh()
-})
-
-watch(autoRefresh, (enabled) => {
-  if (enabled) {
-    refresh()
-    startAutoRefresh()
-    return
+  if (!autoRefreshStore.taskEnabled) {
+    taskStore.get()
   }
-
-  stopAutoRefresh()
 })
 
 function task_delete(item: subscribeType) {
   taskStore.delete(item)
-}
-
-async function refresh() {
-  if (isRefreshing.value) return
-
-  isRefreshing.value = true
-  try {
-    await taskStore.get()
-  } finally {
-    isRefreshing.value = false
-  }
-}
-
-function startAutoRefresh() {
-  stopAutoRefresh()
-  refreshTimer = window.setInterval(refresh, refreshInterval)
-}
-
-function stopAutoRefresh() {
-  if (!refreshTimer) return
-
-  window.clearInterval(refreshTimer)
-  refreshTimer = undefined
 }
 </script>
 

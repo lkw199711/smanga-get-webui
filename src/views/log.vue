@@ -50,61 +50,34 @@
 </template>
 
 <script lang="ts" setup>
-import logApi from '@/api/log'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Document, Refresh, Delete } from '@element-plus/icons-vue'
+import useLogStore from '@/stores/log'
+import useAutoRefreshStore from '@/stores/autoRefresh'
 
-const logs = ref<string[]>([])
-const autoRefresh = ref(false)
+const logStore = useLogStore()
+const autoRefreshStore = useAutoRefreshStore()
+
+const logs = computed(() => logStore.logs)
 const fullSize = ref(true)
-const isRefreshing = ref(false)
-let refreshTimer: ReturnType<typeof window.setInterval> | undefined
-const refreshInterval = 5000
+
+const autoRefresh = computed({
+  get: () => autoRefreshStore.logEnabled,
+  set: (val) => autoRefreshStore.setLogAutoRefresh(val),
+})
 
 onMounted(() => {
-  refresh()
-})
-
-onUnmounted(() => {
-  stopAutoRefresh()
-})
-
-watch(autoRefresh, (enabled) => {
-  if (enabled) {
-    refresh()
-    startAutoRefresh()
-    return
+  if (!autoRefreshStore.logEnabled) {
+    logStore.fetch()
   }
-
-  stopAutoRefresh()
 })
 
 async function refresh() {
-  if (isRefreshing.value) return
-
-  isRefreshing.value = true
-  try {
-    logs.value = await logApi.get()
-  } finally {
-    isRefreshing.value = false
-  }
+  await logStore.fetch()
 }
 
 async function clear() {
-  await logApi.clear()
-  logs.value = []
-}
-
-function startAutoRefresh() {
-  stopAutoRefresh()
-  refreshTimer = window.setInterval(refresh, refreshInterval)
-}
-
-function stopAutoRefresh() {
-  if (!refreshTimer) return
-
-  window.clearInterval(refreshTimer)
-  refreshTimer = undefined
+  await logStore.clear()
 }
 </script>
 
