@@ -1,6 +1,7 @@
 export type subscribeType = {
     website: string
-    id: number
+    id: number | string
+    taskId?: string
     name: string
     chapterCount: number
     url?: string

@@ -108,7 +108,7 @@
             <div class="task-grid" @dragover.prevent @drop.prevent="onTaskPageDrop">
               <div
                 v-for="(item, index) in group.items"
-                :key="`${group.key}-${item.website}-${item.id}-${item.name}`"
+                :key="item.taskId || `${group.key}-${item.website}-${item.id}-${item.name}`"
                 class="task-card"
                 :class="{
                   'is-dragging': isTaskDragging(group.key, index),
