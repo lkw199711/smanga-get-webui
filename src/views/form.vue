@@ -54,13 +54,16 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref } from 'vue'
+import { reactive } from 'vue'
 import { Search, Plus, VideoPlay } from '@element-plus/icons-vue'
 import smangaAxios from '@/api'
 import { ElMessage } from 'element-plus'
 import useSubscribeStore from '@/stores/subscribe'
 import useTaskstore from '@/stores/task'
-import _ from 'lodash'
+
+defineOptions({
+  name: 'SubscribeForm',
+})
 
 const subscribeStore = useSubscribeStore()
 const taskStore = useTaskstore()

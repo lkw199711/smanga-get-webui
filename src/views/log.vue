@@ -55,6 +55,10 @@ import { Document, Refresh, Delete } from '@element-plus/icons-vue'
 import useLogStore from '@/stores/log'
 import useAutoRefreshStore from '@/stores/autoRefresh'
 
+defineOptions({
+  name: 'LogView',
+})
+
 const logStore = useLogStore()
 const autoRefreshStore = useAutoRefreshStore()
 

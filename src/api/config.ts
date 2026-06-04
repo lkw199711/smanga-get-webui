@@ -1,13 +1,21 @@
 import smangaAxios from './index'
 import type { AppConfig } from '@/type/config'
 
+type ConfigGetResponse = {
+  code?: number
+  data: AppConfig
+  meta?: {
+    configPath?: string
+  }
+}
+
 export default {
   /**
    * 获取完整配置
    */
-  async get(): Promise<any> {
-    const res = await smangaAxios.get('/config')
-    return res
+  async get(): Promise<ConfigGetResponse> {
+    const res = await smangaAxios.get<ConfigGetResponse>('/config')
+    return res.data
   },
 
   /**

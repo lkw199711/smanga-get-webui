@@ -121,6 +121,10 @@ import useTaskStore from '@/stores/task'
 import useAutoRefreshStore from '@/stores/autoRefresh'
 import type { subscribeType } from '@/type/index'
 
+defineOptions({
+  name: 'TaskView',
+})
+
 const taskStore = useTaskStore()
 const autoRefreshStore = useAutoRefreshStore()
 

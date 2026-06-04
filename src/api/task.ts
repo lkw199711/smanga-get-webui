@@ -1,4 +1,5 @@
 import smangaAxios from '@/api'
+import type { subscribeType } from '@/type'
 
 const taskApi = {
     async get() {
@@ -9,7 +10,7 @@ const taskApi = {
         const http = await smangaAxios.post('task')
         return http.data
     },
-    async delete(data: any) {
+    async delete(data: subscribeType) {
         return await smangaAxios.delete(`task`, { data: data })
     },
 }

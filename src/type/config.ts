@@ -1,3 +1,5 @@
+export type ConfigFieldValue = string | number | boolean | null | undefined
+
 /** 定时任务配置 */
 export interface CronConfig {
   enable: boolean
@@ -19,7 +21,7 @@ export interface ImmediatelyConfig {
   toomicsUpdateSc: boolean
   toomicsUpdateTc: boolean
   omegascansUpdate: boolean
-  bilibili?: boolean
+  bilibili: boolean
   toomicsCompressSc: boolean
   toomicsCompressTc: boolean
   omegascansCompress: boolean
@@ -32,7 +34,7 @@ export interface WebsiteConfig {
   cookieFile: string
   downloadPath: string
   compressPath: string
-  [key: string]: any
+  [key: string]: ConfigFieldValue
 }
 
 /** 完整应用配置 */
@@ -54,5 +56,5 @@ export interface AppConfig {
   bilibili: WebsiteConfig
   omegascans: WebsiteConfig
   gentleman: WebsiteConfig
-  [key: string]: any
+  [key: string]: unknown
 }

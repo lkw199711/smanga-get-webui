@@ -18,6 +18,10 @@ import { computed, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Collection, List, Document, Setting } from '@element-plus/icons-vue'
 
+defineOptions({
+  name: 'SmangaTabbar',
+})
+
 const router = useRouter()
 const route = useRoute()
 

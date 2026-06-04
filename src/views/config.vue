@@ -152,6 +152,9 @@
               <el-form-item label="更新OmegaScans封面">
                 <el-switch v-model="form.immediately.omegascansUpdate" />
               </el-form-item>
+              <el-form-item label="执行Bilibili任务">
+                <el-switch v-model="form.immediately.bilibili" />
+              </el-form-item>
               <el-form-item label="压缩简体Toomics">
                 <el-switch v-model="form.immediately.toomicsCompressSc" />
               </el-form-item>
@@ -368,16 +371,19 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import {
   Setting,
-  Tools,
   Refresh,
   Check,
   RefreshLeft,
   QuestionFilled,
 } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import configApi from '@/api/config'
-import type { AppConfig } from '@/type/config'
+import type { AppConfig, WebsiteConfig } from '@/type/config'
 import _ from 'lodash'
+
+defineOptions({
+  name: 'ConfigView',
+})
 
 const loading = ref(false)
 const saving = ref(false)
@@ -391,6 +397,14 @@ const rawError = ref('')
 // 深拷贝原始配置，用于比对修改
 let originalConfig: AppConfig | null = null
 
+type SiteKey = 'toomics' | 'toomics-sc' | 'toomics-tc' | 'bilibili' | 'omegascans' | 'gentleman'
+
+const defaultSiteConfig: WebsiteConfig = {
+  cookieFile: '',
+  downloadPath: '',
+  compressPath: '',
+}
+
 // 表单默认值（防止首次渲染时 undefined 报错）
 const defaultConfig: AppConfig = {
   headless: true,
@@ -401,6 +415,7 @@ const defaultConfig: AppConfig = {
     toomicsUpdateSc: false,
     toomicsUpdateTc: false,
     omegascansUpdate: false,
+    bilibili: false,
     toomicsCompressSc: false,
     toomicsCompressTc: false,
     omegascansCompress: false,
@@ -413,11 +428,75 @@ const defaultConfig: AppConfig = {
   downloadPath: '',
   compressPath: '',
   cacheRoot: '',
+  toomics: {
+    ...defaultSiteConfig,
+    coverCache: '',
+    chapterCache: '',
+    userName: '',
+    passWord: '',
+    scrollStep: 400,
+    scrollDelay: 500,
+    maxRetry: 7,
+    downloadLockedMeta: false,
+    autoCompress: false,
+    cloudPath: '',
+    jumpExist: false,
+    jumpMangas: '',
+    updateOnlyDay: false,
+  },
+  'toomics-sc': {
+    ...defaultSiteConfig,
+    coverCache: '',
+    chapterCache: '',
+    userName: '',
+    passWord: '',
+    scrollStep: 400,
+    scrollDelay: 500,
+    maxRetry: 7,
+    downloadLockedMeta: false,
+    autoCompress: false,
+    cloudPath: '',
+    jumpExist: false,
+    jumpMangas: '',
+    updateOnlyDay: false,
+  },
+  'toomics-tc': {
+    ...defaultSiteConfig,
+    coverCache: '',
+    chapterCache: '',
+    userName: '',
+    passWord: '',
+    scrollStep: 400,
+    scrollDelay: 500,
+    maxRetry: 7,
+    downloadLockedMeta: false,
+    autoCompress: false,
+    cloudPath: '',
+    jumpExist: false,
+    jumpMangas: '',
+    updateOnlyDay: false,
+  },
+  bilibili: {
+    ...defaultSiteConfig,
+    scrollStep: 400,
+    scrollDelay: 500,
+    downloadLockedMeta: false,
+  },
+  omegascans: {
+    ...defaultSiteConfig,
+    autoCompress: false,
+    cloudPath: '',
+  },
+  gentleman: {
+    ...defaultSiteConfig,
+    organizePath: '',
+    organize: false,
+  },
 }
 
 const form = reactive<AppConfig>(_.cloneDeep(defaultConfig))
 
-const siteTabs = [
+const siteTabs: Array<{ key: SiteKey; label: string }> = [
   { key: 'toomics', label: 'Toomics' },
   { key: 'toomics-sc', label: 'Toomics-SC' },
   { key: 'toomics-tc', label: 'Toomics-TC' },
@@ -426,43 +505,91 @@ const siteTabs = [
   { key: 'gentleman', label: '绅士漫画' },
 ]
 
+const siteSwitchFields: Record<SiteKey, string[]> = {
+  toomics: ['downloadLockedMeta', 'autoCompress', 'jumpExist', 'updateOnlyDay'],
+  'toomics-sc': ['downloadLockedMeta', 'autoCompress', 'jumpExist', 'updateOnlyDay'],
+  'toomics-tc': ['downloadLockedMeta', 'autoCompress', 'jumpExist', 'updateOnlyDay'],
+  bilibili: ['downloadLockedMeta'],
+  omegascans: ['autoCompress'],
+  gentleman: ['organize'],
+}
+
 const isDirty = computed(() => {
   if (!originalConfig) return false
   return !_.isEqual(form, originalConfig)
 })
 
-// 兼容 0/1 转 boolean
-function normalizeBooleans(obj: any) {
-  if (!obj || typeof obj !== 'object') return obj
-  const result = _.cloneDeep(obj)
-  for (const key of Object.keys(result)) {
-    if (result[key] === 0) result[key] = false
-    else if (result[key] === 1) result[key] = true
-    else if (typeof result[key] === 'object' && result[key] !== null) {
-      result[key] = normalizeBooleans(result[key])
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function toSwitchValue(value: unknown, fallback = false) {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value !== 0
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+    if (['0', 'false', 'no', 'off', ''].includes(normalized)) return false
+  }
+  if (value === null || value === undefined) return fallback
+  return Boolean(value)
+}
+
+function normalizeConfig(config: AppConfig) {
+  const normalized = _.merge(_.cloneDeep(defaultConfig), _.cloneDeep(config))
+
+  normalized.headless = toSwitchValue(normalized.headless, defaultConfig.headless)
+  normalized.endAfterSetCookie = toSwitchValue(
+    normalized.endAfterSetCookie,
+    defaultConfig.endAfterSetCookie,
+  )
+  normalized.shutdownAfterSetCookie = toSwitchValue(
+    normalized.shutdownAfterSetCookie,
+    defaultConfig.shutdownAfterSetCookie,
+  )
+  normalized.autoRemoveSubscribe = toSwitchValue(
+    normalized.autoRemoveSubscribe,
+    defaultConfig.autoRemoveSubscribe,
+  )
+  normalized.proxy.enable = toSwitchValue(normalized.proxy.enable, defaultConfig.proxy.enable)
+  normalized.cron.enable = toSwitchValue(normalized.cron.enable, defaultConfig.cron.enable)
+  normalized.cron.clearCookies = toSwitchValue(
+    normalized.cron.clearCookies,
+    defaultConfig.cron.clearCookies,
+  )
+
+  normalized.immediately.subscribeTask = toSwitchValue(normalized.immediately.subscribeTask)
+  normalized.immediately.toomicsUpdateSc = toSwitchValue(normalized.immediately.toomicsUpdateSc)
+  normalized.immediately.toomicsUpdateTc = toSwitchValue(normalized.immediately.toomicsUpdateTc)
+  normalized.immediately.omegascansUpdate = toSwitchValue(normalized.immediately.omegascansUpdate)
+  normalized.immediately.bilibili = toSwitchValue(normalized.immediately.bilibili)
+  normalized.immediately.toomicsCompressSc = toSwitchValue(normalized.immediately.toomicsCompressSc)
+  normalized.immediately.toomicsCompressTc = toSwitchValue(normalized.immediately.toomicsCompressTc)
+  normalized.immediately.omegascansCompress = toSwitchValue(normalized.immediately.omegascansCompress)
+  normalized.immediately.omegascansSyncCloud = toSwitchValue(
+    normalized.immediately.omegascansSyncCloud,
+  )
+  if (normalized.immediately.debugOmegascans !== undefined) {
+    normalized.immediately.debugOmegascans = toSwitchValue(normalized.immediately.debugOmegascans)
+  }
+
+  for (const site of siteTabs) {
+    const siteConfig = normalized[site.key]
+    for (const field of siteSwitchFields[site.key]) {
+      siteConfig[field] = toSwitchValue(siteConfig[field])
     }
   }
-  return result
+
+  return normalized
 }
 
 // 填充表单
 function fillForm(config: AppConfig) {
-  const normalized = normalizeBooleans(config)
-  // 确保嵌套对象存在
-  normalized.proxy = { ...defaultConfig.proxy, ...(normalized.proxy || {}) }
-  normalized.cron = { ...defaultConfig.cron, ...(normalized.cron || {}) }
-  normalized.immediately = {
-    ...defaultConfig.immediately,
-    ...(normalized.immediately || {}),
-  }
-
-  // 站点初始化
-  for (const site of siteTabs) {
-    if (!normalized[site.key]) {
-      normalized[site.key] = { cookieFile: '', downloadPath: '', compressPath: '' }
-    }
-  }
-
+  const normalized = normalizeConfig(config)
   Object.assign(form, normalized)
   originalConfig = _.cloneDeep(normalized)
   syncFormToRaw()
@@ -480,8 +607,8 @@ async function fetchConfig() {
     } else {
       ElMessage.error('获取配置失败')
     }
-  } catch (e: any) {
-    ElMessage.error(`获取配置失败: ${e.message || e}`)
+  } catch (e: unknown) {
+    ElMessage.error(`获取配置失败: ${errorMessage(e)}`)
   } finally {
     loading.value = false
   }
@@ -494,8 +621,8 @@ async function saveConfig() {
     await configApi.update({ ...form })
     originalConfig = _.cloneDeep({ ...form })
     ElMessage.success('配置保存成功')
-  } catch (e: any) {
-    ElMessage.error(`保存失败: ${e.message || e}`)
+  } catch (e: unknown) {
+    ElMessage.error(`保存失败: ${errorMessage(e)}`)
   } finally {
     saving.value = false
   }
@@ -514,34 +641,35 @@ function syncFormToRaw() {
   try {
     rawJson.value = JSON.stringify({ ...form }, null, 2)
     rawError.value = ''
-  } catch (e: any) {
-    rawError.value = `格式化失败: ${e.message}`
+  } catch (e: unknown) {
+    rawError.value = `格式化失败: ${errorMessage(e)}`
   }
 }
 
 // 校验并保存原始 JSON
 async function saveRawJson() {
   rawError.value = ''
-  let parsed: any
+  let parsed: unknown
   try {
     parsed = JSON.parse(rawJson.value)
-  } catch (e: any) {
-    rawError.value = `JSON 格式错误: ${e.message}`
+  } catch (e: unknown) {
+    rawError.value = `JSON 格式错误: ${errorMessage(e)}`
     return
   }
 
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  if (!isRecord(parsed)) {
     rawError.value = 'JSON 必须是对象类型'
     return
   }
 
+  const parsedConfig = parsed as AppConfig
   saving.value = true
   try {
-    await configApi.update(parsed)
-    fillForm(parsed)
+    await configApi.update(parsedConfig)
+    fillForm(parsedConfig)
     ElMessage.success('JSON 配置保存成功')
-  } catch (e: any) {
-    rawError.value = `保存失败: ${e.message || e}`
+  } catch (e: unknown) {
+    rawError.value = `保存失败: ${errorMessage(e)}`
   } finally {
     saving.value = false
   }
@@ -551,7 +679,7 @@ function isToomicsSite(key: string) {
   return key.startsWith('toomics')
 }
 
-function formatTimestamp(ts: any) {
+function formatTimestamp(ts: unknown) {
   if (!ts) return ''
   const num = Number(ts)
   if (isNaN(num)) return String(ts)

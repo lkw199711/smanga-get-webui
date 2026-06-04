@@ -36,6 +36,10 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Collection, List, Document, Setting } from '@element-plus/icons-vue'
 
+defineOptions({
+  name: 'SmangaNav',
+})
+
 const router = useRouter()
 const route = useRoute()
 

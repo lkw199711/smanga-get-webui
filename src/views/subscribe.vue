@@ -52,6 +52,10 @@ import { Collection, Delete } from '@element-plus/icons-vue'
 import useSubscribeStore from '@/stores/subscribe'
 import type { subscribeType } from '@/type'
 
+defineOptions({
+  name: 'SubscribeView',
+})
+
 const subscribeStore = useSubscribeStore()
 
 onMounted(() => {

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { TabsPaneContext } from 'element-plus'
-import subForm from './views/form.vue'
 import smangaNav from './layout/nav.vue'
 import smangaTabbar from './layout/tabbar.vue'
 </script>
