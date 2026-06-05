@@ -31,4 +31,9 @@ export default {
   async patch(partial: Partial<AppConfig>) {
     return await smangaAxios.patch('/config', partial)
   },
+
+  async clearToomicsCookie() {
+    const res = await smangaAxios.delete('/config/toomics-cookie')
+    return res.data
+  },
 }

@@ -61,6 +61,21 @@
                   <span class="form-hint">开启后本次启动完成Cookie设置即自动关机，<b>执行后自动重置为关闭</b></span>
                 </div>
               </el-form-item>
+              <el-form-item label="玩漫Cookie">
+                <div class="one-shot-row">
+                  <el-button
+                    type="warning"
+                    size="small"
+                    plain
+                    :loading="clearingToomicsCookie"
+                    @click="clearToomicsCookie"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    清除玩漫cookie
+                  </el-button>
+                  <span class="form-hint">将玩漫 cookie 文件内容置为 <b>[]</b></span>
+                </div>
+              </el-form-item>
               <el-form-item label="自动移除已完成订阅">
                 <el-switch v-model="form.autoRemoveSubscribe" />
               </el-form-item>
@@ -375,8 +390,9 @@ import {
   Check,
   RefreshLeft,
   QuestionFilled,
+  Delete,
 } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import configApi from '@/api/config'
 import type { AppConfig, WebsiteConfig } from '@/type/config'
 import _ from 'lodash'
@@ -394,6 +410,7 @@ const configPath = ref('')
 const rawJson = ref('')
 const rawError = ref('')
 const isDirty = ref(false)
+const clearingToomicsCookie = ref(false)
 
 // 深拷贝原始配置，用于比对修改
 let originalConfig: AppConfig | null = null
@@ -640,6 +657,33 @@ async function saveConfig() {
     ElMessage.error(`保存失败: ${errorMessage(e)}`)
   } finally {
     saving.value = false
+  }
+}
+
+async function clearToomicsCookie() {
+  try {
+    await ElMessageBox.confirm(
+      '确定清除玩漫 cookie 吗？文件内容会被置为 []。',
+      '清除玩漫cookie',
+      {
+        type: 'warning',
+        confirmButtonText: '清除',
+        cancelButtonText: '取消',
+      },
+    )
+  } catch {
+    return
+  }
+
+  clearingToomicsCookie.value = true
+
+  try {
+    await configApi.clearToomicsCookie()
+    ElMessage.success('玩漫 cookie 已清除')
+  } catch (e: unknown) {
+    ElMessage.error(`清除玩漫 cookie 失败: ${errorMessage(e)}`)
+  } finally {
+    clearingToomicsCookie.value = false
   }
 }
 
