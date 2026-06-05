@@ -205,6 +205,33 @@
                       placeholder="data/cookies/xxx.json"
                     />
                   </el-form-item>
+                  <el-form-item label="手动认证">
+                    <div class="manual-auth-row">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        plain
+                        :loading="manualAuthLoading[site.key]"
+                        :disabled="manualAuthActive[site.key]"
+                        @click="startManualAuth(site.key)"
+                      >
+                        <el-icon><Refresh /></el-icon>
+                        开始认证
+                      </el-button>
+                      <el-button
+                        type="success"
+                        size="small"
+                        plain
+                        :loading="manualAuthLoading[site.key]"
+                        :disabled="!manualAuthActive[site.key]"
+                        @click="finishManualAuth(site.key)"
+                      >
+                        <el-icon><Check /></el-icon>
+                        完成操作
+                      </el-button>
+                      <span class="form-hint">打开目标网站后手动完成验证，再保存 cookie</span>
+                    </div>
+                  </el-form-item>
                   <el-form-item label="下载路径">
                     <el-input
                       v-model="form[site.key].downloadPath"
@@ -417,6 +444,23 @@ let originalConfig: AppConfig | null = null
 const originalConfigSignature = ref('')
 
 type SiteKey = 'toomics' | 'toomics-sc' | 'toomics-tc' | 'bilibili' | 'omegascans' | 'gentleman'
+
+const manualAuthLoading = reactive<Record<SiteKey, boolean>>({
+  toomics: false,
+  'toomics-sc': false,
+  'toomics-tc': false,
+  bilibili: false,
+  omegascans: false,
+  gentleman: false,
+})
+const manualAuthActive = reactive<Record<SiteKey, boolean>>({
+  toomics: false,
+  'toomics-sc': false,
+  'toomics-tc': false,
+  bilibili: false,
+  omegascans: false,
+  gentleman: false,
+})
 
 const defaultSiteConfig: WebsiteConfig = {
   cookieFile: '',
@@ -687,6 +731,37 @@ async function clearToomicsCookie() {
   }
 }
 
+async function startManualAuth(site: SiteKey) {
+  if (isDirty.value) {
+    ElMessage.warning('请先保存配置，再开始手动认证')
+    return
+  }
+
+  manualAuthLoading[site] = true
+  try {
+    await configApi.startManualAuth(site)
+    manualAuthActive[site] = true
+    ElMessage.success('认证窗口已打开，请在浏览器中完成操作')
+  } catch (e: unknown) {
+    ElMessage.error(`打开手动认证失败: ${errorMessage(e)}`)
+  } finally {
+    manualAuthLoading[site] = false
+  }
+}
+
+async function finishManualAuth(site: SiteKey) {
+  manualAuthLoading[site] = true
+  try {
+    await configApi.finishManualAuth(site)
+    manualAuthActive[site] = false
+    ElMessage.success('cookie 已保存，浏览器已关闭')
+  } catch (e: unknown) {
+    ElMessage.error(`完成手动认证失败: ${errorMessage(e)}`)
+  } finally {
+    manualAuthLoading[site] = false
+  }
+}
+
 // 重置未保存修改
 function resetConfig() {
   if (originalConfig) {
@@ -835,6 +910,13 @@ onMounted(() => {
 }
 
 .one-shot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.manual-auth-row {
   display: flex;
   align-items: center;
   gap: 8px;

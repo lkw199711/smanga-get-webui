@@ -36,4 +36,14 @@ export default {
     const res = await smangaAxios.delete('/config/toomics-cookie')
     return res.data
   },
+
+  async startManualAuth(website: string) {
+    const res = await smangaAxios.post('/auth/manual/start', { website })
+    return res.data
+  },
+
+  async finishManualAuth(website: string) {
+    const res = await smangaAxios.post('/auth/manual/finish', { website })
+    return res.data
+  },
 }
