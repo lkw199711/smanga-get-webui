@@ -20,7 +20,7 @@ export type taskProgressType = {
 }
 
 export type runningTaskType = {
-    status: 'running' | 'success' | 'failed'
+    status: 'running' | 'success' | 'failed' | 'paused'
     task: subscribeType
     progress: taskProgressType
     startedAt: string

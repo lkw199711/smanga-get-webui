@@ -206,6 +206,7 @@ const currentTaskStatusText = computed(() => {
   if (!currentRunningTask.value) return '等待中'
   if (currentRunningTask.value.status === 'success') return '已完成'
   if (currentRunningTask.value.status === 'failed') return '执行失败'
+  if (currentRunningTask.value.status === 'paused') return '已暂停'
 
   return '执行中'
 })
@@ -214,6 +215,7 @@ const currentTaskTagType = computed(() => {
   if (!currentRunningTask.value) return 'info'
   if (currentRunningTask.value.status === 'success') return 'success'
   if (currentRunningTask.value.status === 'failed') return 'danger'
+  if (currentRunningTask.value.status === 'paused') return 'warning'
 
   return 'primary'
 })
@@ -222,6 +224,7 @@ const currentTaskProgressStatus = computed(() => {
   if (!currentRunningTask.value) return undefined
   if (currentRunningTask.value.status === 'success') return 'success'
   if (currentRunningTask.value.status === 'failed') return 'exception'
+  if (currentRunningTask.value.status === 'paused') return 'warning'
 
   return undefined
 })
