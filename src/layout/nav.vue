@@ -19,6 +19,10 @@
         <el-icon><List /></el-icon>
         <span>任务</span>
       </el-menu-item>
+      <el-menu-item index="manga">
+        <el-icon><Picture /></el-icon>
+        <span>成果</span>
+      </el-menu-item>
       <el-menu-item index="log">
         <el-icon><Document /></el-icon>
         <span>日志</span>
@@ -34,7 +38,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Collection, List, Document, Setting } from '@element-plus/icons-vue'
+import { Collection, List, Document, Setting, Picture } from '@element-plus/icons-vue'
 
 defineOptions({
   name: 'SmangaNav',

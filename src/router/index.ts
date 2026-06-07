@@ -24,6 +24,11 @@ const router = createRouter({
       component: () => import('../views/task.vue'),
     },
     {
+      path: '/manga',
+      name: 'manga',
+      component: () => import('../views/manga.vue'),
+    },
+    {
       path: '/log',
       name: 'log',
       component: () => import('../views/log.vue'),
