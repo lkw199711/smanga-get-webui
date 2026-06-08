@@ -39,6 +39,11 @@ const router = createRouter({
       component: () => import('../views/config.vue'),
     },
     {
+      path: '/priority',
+      name: 'priority',
+      component: () => import('../views/priority.vue'),
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting

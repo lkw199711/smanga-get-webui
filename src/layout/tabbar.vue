@@ -16,7 +16,7 @@
 <script lang="ts" setup>
 import { computed, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Collection, List, Document, Setting, Picture } from '@element-plus/icons-vue'
+import { Collection, List, Document, Setting, Picture, Star } from '@element-plus/icons-vue'
 
 defineOptions({
   name: 'SmangaTabbar',
@@ -31,6 +31,7 @@ const tabs = [
   { name: 'manga', label: '成果', icon: markRaw(Picture) },
   { name: 'log', label: '日志', icon: markRaw(Document) },
   { name: 'config', label: '配置', icon: markRaw(Setting) },
+  { name: 'priority', label: '优先级', icon: markRaw(Star) },
 ]
 
 const activeTab = computed(() => {

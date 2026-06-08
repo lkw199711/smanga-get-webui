@@ -31,6 +31,10 @@
         <el-icon><Setting /></el-icon>
         <span>配置</span>
       </el-menu-item>
+      <el-menu-item index="priority">
+        <el-icon><Star /></el-icon>
+        <span>优先级</span>
+      </el-menu-item>
     </el-menu>
   </el-header>
 </template>
@@ -38,7 +42,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Collection, List, Document, Setting, Picture } from '@element-plus/icons-vue'
+import { Collection, List, Document, Setting, Picture, Star } from '@element-plus/icons-vue'
 
 defineOptions({
   name: 'SmangaNav',
