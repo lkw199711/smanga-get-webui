@@ -7,6 +7,18 @@
           <h3 class="log-title">系统日志</h3>
         </div>
         <div class="log-actions">
+          <el-date-picker
+            v-model="selectedDate"
+            type="date"
+            placeholder="选择日期"
+            size="small"
+            :disabled-date="disabledDate"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            clearable
+            style="width: 160px"
+            @change="onDateChange"
+          />
           <label class="log-switch-control">
             <span>铺满窗口</span>
             <el-switch v-model="fullSize" size="small" />
@@ -31,7 +43,7 @@
           <span class="console-dot dot-red"></span>
           <span class="console-dot dot-yellow"></span>
           <span class="console-dot dot-green"></span>
-          <span class="console-label">log.txt</span>
+          <span class="console-label">{{ consoleLabel }}</span>
         </div>
         <div class="console-body">
           <div v-if="!logs.length" class="console-empty">暂无日志记录</div>
@@ -52,6 +64,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue'
 import { Document, Refresh, Delete } from '@element-plus/icons-vue'
+import type { DateModelType } from 'element-plus'
 import useLogStore from '@/stores/log'
 import useAutoRefreshStore from '@/stores/autoRefresh'
 
@@ -63,14 +76,47 @@ const logStore = useLogStore()
 const autoRefreshStore = useAutoRefreshStore()
 
 const logs = computed(() => logStore.logs)
+const availableDates = computed(() => logStore.dates)
 const fullSize = ref(true)
+
+/** 日期选择器的绑定值，空字符串 = 今天 */
+const selectedDate = ref('')
+
+/** 控制台标签：显示当前查看的日志文件名 */
+const consoleLabel = computed(() => {
+  const d = selectedDate.value
+  return d ? `${d}.log` : `${todayStr()}.log`
+})
+
+/** 获取今天日期字符串 */
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** 禁用没有日志的日期 */
+function disabledDate(date: Date): boolean {
+  const ds = date.toISOString().slice(0, 10)
+  if (ds === todayStr()) return false // 今天始终可选
+  return !availableDates.value.includes(ds)
+}
+
+/** 日期变更：清空选择 = 今天，否则加载指定日期 */
+function onDateChange(value: DateModelType) {
+  if (!value) {
+    selectedDate.value = ''
+    logStore.fetch()
+  } else {
+    logStore.selectDate(value as string)
+  }
+}
 
 const autoRefresh = computed({
   get: () => autoRefreshStore.logEnabled,
   set: (val) => autoRefreshStore.setLogAutoRefresh(val),
 })
 
-onMounted(() => {
+onMounted(async () => {
+  await logStore.fetchDates()
   if (autoRefreshStore.logEnabled) {
     autoRefreshStore.setLogAutoRefresh(true)
   } else {
@@ -79,7 +125,11 @@ onMounted(() => {
 })
 
 async function refresh() {
-  await logStore.fetch()
+  if (selectedDate.value) {
+    await logStore.fetch(selectedDate.value)
+  } else {
+    await logStore.fetch()
+  }
 }
 
 async function clear() {
