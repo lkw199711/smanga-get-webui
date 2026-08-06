@@ -9,6 +9,16 @@
           <h3 class="section-title">任务队列</h3>
         </div>
         <div class="section-actions">
+          <el-button
+            type="success"
+            size="small"
+            plain
+            :loading="importingTasks"
+            @click="openTaskImportDialog"
+          >
+            <el-icon><DocumentCopy /></el-icon>
+            导入任务
+          </el-button>
           <label class="auto-refresh-control">
             <span>自动刷新</span>
             <el-switch v-model="autoRefresh" size="small" />
@@ -150,6 +160,43 @@
         </template>
       </div>
     </div>
+
+    <el-dialog
+      v-model="taskImportDialogVisible"
+      title="导入任务"
+      width="min(680px, 92vw)"
+      :close-on-click-modal="!importingTasks"
+      :close-on-press-escape="!importingTasks"
+    >
+      <el-alert
+        class="task-import-tip"
+        title="请粘贴以数组为根节点的任务 JSON；校验通过后会立即加入任务队列。"
+        type="info"
+        :closable="false"
+        show-icon
+      />
+      <el-input
+        v-model="taskImportText"
+        type="textarea"
+        :rows="14"
+        resize="vertical"
+        placeholder='例如：[{"website":"gentleman","id":1,"name":"漫画名称","url":"https://example.com"}]'
+        :disabled="importingTasks"
+      />
+      <template #footer>
+        <el-button :disabled="importingTasks" @click="taskImportDialogVisible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="importingTasks"
+          :disabled="!taskImportText.trim()"
+          @click="importTasksFromText"
+        >
+          确认导入
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -157,7 +204,7 @@
 import mForm from './form.vue'
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { List, Delete, FolderOpened, Rank, VideoPlay } from '@element-plus/icons-vue'
+import { List, Delete, FolderOpened, Rank, VideoPlay, DocumentCopy } from '@element-plus/icons-vue'
 import useTaskStore, { type taskQueueKey } from '@/stores/task'
 import useAutoRefreshStore from '@/stores/autoRefresh'
 import type { TaskTriggerType } from '@/api/task'
@@ -173,6 +220,9 @@ const draggingTask = ref<{ queue: taskQueueKey; index: number } | null>(null)
 const dragOverTask = ref<{ queue: taskQueueKey; index: number } | null>(null)
 const triggeringTask = ref<TaskTriggerType | null>(null)
 const clearingTasks = ref(false)
+const importingTasks = ref(false)
+const taskImportDialogVisible = ref(false)
+const taskImportText = ref('')
 
 const quickTaskActions: Array<{ type: TaskTriggerType; label: string }> = [
   { type: 'toomics', label: '玩漫订阅' },
@@ -259,6 +309,33 @@ onMounted(() => {
 
 function task_delete(item: subscribeType) {
   taskStore.delete(item)
+}
+
+function openTaskImportDialog() {
+  taskImportDialogVisible.value = true
+}
+
+async function importTasksFromText() {
+  importingTasks.value = true
+
+  try {
+    const parsed: unknown = JSON.parse(taskImportText.value)
+    if (!Array.isArray(parsed)) {
+      throw new Error('粘贴内容的根节点必须是任务数组')
+    }
+
+    const result = await taskStore.importTasks(parsed)
+    ElMessage.success(`成功导入 ${result.imported} 个任务`)
+    taskImportDialogVisible.value = false
+    taskImportText.value = ''
+  } catch (error) {
+    const message = error instanceof SyntaxError
+      ? 'JSON 格式无效，请检查后重试'
+      : error instanceof Error ? error.message : '任务导入失败'
+    ElMessage.error(message)
+  } finally {
+    importingTasks.value = false
+  }
 }
 
 async function triggerQuickTask(type: TaskTriggerType) {
@@ -407,6 +484,10 @@ function onTaskPageDrop() {
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.task-import-tip {
+  margin-bottom: 14px;
 }
 
 .auto-refresh-control {

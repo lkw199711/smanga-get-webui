@@ -46,6 +46,11 @@ const useTaskstore = defineStore('task', {
             await taskApi.add(task)
             await this.get()
         },
+        async importTasks(tasks: unknown[]) {
+            const result = await taskApi.importTasks(tasks)
+            await this.get()
+            return result
+        },
         async trigger(type: TaskTriggerType) {
             await taskApi.trigger(type)
             await this.get()

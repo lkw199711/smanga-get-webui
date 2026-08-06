@@ -7,6 +7,12 @@ type TaskPayload = subscribeType & {
 
 export type TaskTriggerType = 'toomics' | 'toptoon' | 'omegascans' | 'gentleman'
 
+export type TaskImportResult = {
+    code: number
+    message: string
+    imported: number
+}
+
 function assertApiSuccess(data: unknown) {
     if (data && typeof data === 'object' && 'code' in data && Number(data.code) >= 400) {
         const response = data as Record<string, unknown>
@@ -21,6 +27,11 @@ const taskApi = {
     },
     async add(task: TaskPayload) {
         const http = await smangaAxios.post('task', task)
+        assertApiSuccess(http.data)
+        return http.data
+    },
+    async importTasks(tasks: unknown[]): Promise<TaskImportResult> {
+        const http = await smangaAxios.post('task/import', { tasks })
         assertApiSuccess(http.data)
         return http.data
     },

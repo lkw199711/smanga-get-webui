@@ -3,7 +3,7 @@ export type subscribeType = {
     id: number | string
     taskId?: string
     name: string
-    chapterCount: number
+    chapterCount?: number
     url?: string
     moveEndSubscribe?: boolean
 }
