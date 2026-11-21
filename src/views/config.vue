@@ -229,7 +229,11 @@
                         <el-icon><Check /></el-icon>
                         完成操作
                       </el-button>
-                      <span class="form-hint">打开目标网站后手动完成验证，再保存 cookie</span>
+                      <span class="form-hint">
+                        {{ site.key === 'gentleman'
+                          ? '登录后点击完成操作；系统会验证韩漫分类页、保存 cookie 并自动恢复暂停任务'
+                          : '打开目标网站后手动完成验证，再保存 cookie' }}
+                      </span>
                     </div>
                   </el-form-item>
                   <el-form-item label="下载路径">
@@ -411,6 +415,7 @@
 
 <script lang="ts" setup>
 import { ref, reactive, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   Setting,
   Refresh,
@@ -429,6 +434,7 @@ defineOptions({
 })
 
 const loading = ref(false)
+const route = useRoute()
 const saving = ref(false)
 const configLoaded = ref(false)
 const activeTab = ref('basic')
@@ -597,6 +603,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function errorMessage(error: unknown) {
+  if (isRecord(error) && isRecord(error.response) && isRecord(error.response.data)) {
+    const message = error.response.data.message
+    if (typeof message === 'string' && message) return message
+  }
   return error instanceof Error ? error.message : String(error)
 }
 
@@ -752,9 +762,9 @@ async function startManualAuth(site: SiteKey) {
 async function finishManualAuth(site: SiteKey) {
   manualAuthLoading[site] = true
   try {
-    await configApi.finishManualAuth(site)
+    const result = await configApi.finishManualAuth(site)
     manualAuthActive[site] = false
-    ElMessage.success('cookie 已保存，浏览器已关闭')
+    ElMessage.success(result?.message || 'cookie 已保存，浏览器已关闭')
   } catch (e: unknown) {
     ElMessage.error(`完成手动认证失败: ${errorMessage(e)}`)
   } finally {
@@ -831,6 +841,10 @@ watch(activeTab, (val) => {
 watch(form, updateDirtyState, { deep: true })
 
 onMounted(() => {
+  if (route.query.tab === 'sites') activeTab.value = 'sites'
+  if (siteTabs.some((site) => site.key === route.query.site)) {
+    activeSiteTab.value = route.query.site as SiteKey
+  }
   fetchConfig()
 })
 </script>

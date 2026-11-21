@@ -98,6 +98,21 @@
             />
           </div>
           <p class="progress-message">{{ currentRunningTask.progress.message }}</p>
+          <el-alert
+            v-if="gentlemanAuthPaused"
+            class="auth-required-alert"
+            title="Gentleman 韩漫登录状态已失效"
+            type="warning"
+            :closable="false"
+            show-icon
+          >
+            <template #default>
+              <p>当前任务仍保留在队首。请手动登录并保存 cookie，验证成功后任务会自动恢复。</p>
+              <el-button type="warning" size="small" plain @click="openGentlemanAuth">
+                前往绅士漫画手动认证
+              </el-button>
+            </template>
+          </el-alert>
         </template>
         <p v-else class="progress-message">队列中有 {{ totalTaskCount }} 个任务，等待开始执行。</p>
       </div>
@@ -203,6 +218,7 @@
 <script lang="ts" setup>
 import mForm from './form.vue'
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { List, Delete, FolderOpened, Rank, VideoPlay, DocumentCopy } from '@element-plus/icons-vue'
 import useTaskStore, { type taskQueueKey } from '@/stores/task'
@@ -216,6 +232,7 @@ defineOptions({
 
 const taskStore = useTaskStore()
 const autoRefreshStore = useAutoRefreshStore()
+const router = useRouter()
 const draggingTask = ref<{ queue: taskQueueKey; index: number } | null>(null)
 const dragOverTask = ref<{ queue: taskQueueKey; index: number } | null>(null)
 const triggeringTask = ref<TaskTriggerType | null>(null)
@@ -278,6 +295,18 @@ const currentTaskProgressStatus = computed(() => {
 
   return undefined
 })
+
+const gentlemanAuthPaused = computed(
+  () => currentRunningTask.value?.status === 'paused'
+    && currentRunningTask.value.task.website === 'gentleman'
+)
+
+function openGentlemanAuth() {
+  router.push({
+    name: 'config',
+    query: { tab: 'sites', site: 'gentleman' },
+  })
+}
 
 const hasSubProgress = computed(() => {
   const p = currentRunningTask.value?.progress
@@ -565,6 +594,14 @@ function onTaskPageDrop() {
   color: var(--text-secondary);
   font-size: 13px;
   word-break: break-all;
+}
+
+.auth-required-alert {
+  margin-top: 12px;
+}
+
+.auth-required-alert p {
+  margin: 0 0 10px;
 }
 
 .sub-progress {
